@@ -41,7 +41,7 @@
         
         <div class="mt-4 bg-zinc-900 px-6 py-3 rounded-2xl border border-zinc-800 shadow-inner">
             <p class="text-zinc-500 text-[8px] uppercase tracking-[0.2em] font-black mb-1" id="t-id-label">Your Private Rescue ID</p>
-            <p id="device-display" class="text-[#ccff00] text-xl font-mono tracking-[0.2em] font-black"></p>
+            <p id="device-display" class="text-[#ccff00] text-xl font-mono tracking-[0.2em] font-black">---</p>
         </div>
     </div>
 
@@ -51,7 +51,7 @@
         <div class="absolute inset-0 bg-white/10 opacity-0 group-active:opacity-100 transition-opacity"></div>
     </button>
 
-    <div id="status-box" class="mt-12 p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800 w-full max-w-xs text-center shadow-2xl">
+    <div id="status-box" class="mt-12 p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800 w-full max-w-xs text-center shadow-2xl transition-all">
         <p id="status-text" class="text-zinc-600 font-bold text-[10px] uppercase tracking-[0.2em]">Ready to Transmit</p>
     </div>
 
@@ -72,7 +72,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // --- LÓGICA DE IDIOMA ---
+        // --- IDIOMA ---
         let isSpanish = false;
         window.toggleLanguage = () => {
             isSpanish = !isSpanish;
@@ -98,7 +98,7 @@
         };
 
         window.saveProfile = () => {
-            const name = document.getElementById('user-name-input').value;
+            const name = document.getElementById('user-name-input').value.trim();
             if (name) {
                 localStorage.setItem('user_name', name);
                 document.getElementById('setup-screen').style.opacity = '0';
@@ -110,11 +110,22 @@
         window.triggerRescue = async () => {
             const status = document.getElementById('status-text');
             const pName = localStorage.getItem('user_name') || "Unknown Patient";
+            const btn = document.getElementById('main-trigger');
             
-            if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+            // Efecto táctil inmediato
+            if (navigator.vibrate) navigator.vibrate([400, 100, 400]);
+            btn.classList.add('scale-90', 'opacity-50');
+            setTimeout(() => btn.classList.remove('scale-90', 'opacity-50'), 200);
 
-            status.innerText = isSpanish ? "LOCALIZANDO GPS..." : "LOCATING GPS...";
-            status.className = "text-yellow-400 font-bold text-[10px] animate-pulse uppercase tracking-[0.2em]";
+            status.innerText = isSpanish ? "BUSCANDO SATÉLITES..." : "SEARCHING SATELLITES...";
+            status.className = "text-yellow-400 font-black text-[10px] animate-pulse uppercase tracking-[0.2em]";
+
+            // Configuración de GPS de alta precisión
+            const geoOptions = {
+                enableHighAccuracy: true, 
+                timeout: 10000, 
+                maximumAge: 0 // Forzar ubicación fresca, no de caché
+            };
 
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -122,11 +133,14 @@
                         const coords = `${pos.coords.latitude},${pos.coords.longitude}`;
                         sendToFirebase(coords, pName);
                     },
-                    () => sendToFirebase("No GPS Data", pName),
-                    { timeout: 8000, enableHighAccuracy: true }
+                    (err) => {
+                        console.warn("GPS Error:", err);
+                        sendToFirebase("No GPS Data", pName);
+                    },
+                    geoOptions
                 );
             } else {
-                sendToFirebase("No GPS Data", pName);
+                sendToFirebase("GPS Not Supported", pName);
             }
         };
 
@@ -134,30 +148,22 @@
             const status = document.getElementById('status-text');
             const alertRef = ref(db, 'alerts/' + patientID);
 
-            // Cumpliendo con las Reglas de Seguridad (hasChildren: patientName, location, status, timestamp)
             set(alertRef, {
                 patientName: name,
                 location: coords,
                 timestamp: Date.now(),
                 status: 'CRITICAL'
             }).then(() => {
-                status.innerText = isSpanish ? "SEÑAL ENTREGADA ✅" : "SIGNAL DELIVERED ✅";
+                status.innerText = isSpanish ? "SEÑAL ENVIADA ✅" : "SIGNAL SENT ✅";
                 status.className = "text-[#ccff00] font-black text-[10px] uppercase tracking-[0.2em]";
+                // Feedback visual de éxito
+                document.getElementById('status-box').classList.add('border-[#ccff00]');
             }).catch((e) => {
-                status.innerText = isSpanish ? "ERROR DE SEGURIDAD" : "SECURITY ERROR";
+                status.innerText = isSpanish ? "ERROR DE RED" : "NETWORK ERROR";
                 status.className = "text-red-500 font-black text-[10px] uppercase tracking-[0.2em]";
                 console.error(e);
             });
         }
-
-        // Soporte de Teclas de Volumen / Media
-        document.addEventListener('keydown', (e) => {
-            const triggers = ['Enter', 'VolumeUp', 'MediaPlayPause', 'HeadsetHook'];
-            if (triggers.includes(e.key)) {
-                e.preventDefault();
-                triggerRescue();
-            }
-        });
     </script>
 </body>
 </html>
