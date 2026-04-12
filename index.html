@@ -3,151 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MontCode™ Rescue Sender</title>
+    <title>MontCode™ Rescue Send</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-6 font-sans overflow-hidden">
+<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-6 font-sans relative overflow-hidden">
 
-    <button onclick="toggleLanguage()" class="absolute top-4 right-4 bg-zinc-800 px-3 py-1 rounded-full text-[10px] font-bold border border-zinc-700 z-[60] active:scale-95 transition-all">
-        <span id="lang-label">ESP</span> 🇪🇸
-    </button>
-
-    <div id="setup-screen" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-start p-8 text-center transition-opacity duration-500 overflow-y-auto hidden">
-        <div class="w-20 h-20 mt-10 mb-6 bg-zinc-900 rounded-full flex items-center justify-center border-2 border-zinc-800 overflow-hidden">
+    <div id="setup-screen" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-start p-6 text-center transition-opacity duration-500 overflow-y-auto">
+        <div class="w-16 h-16 mt-8 mb-4 bg-zinc-900 rounded-full flex items-center justify-center border-2 border-zinc-800 overflow-hidden">
             <img src="logo.png.jpg" alt="Logo" class="w-full h-full object-cover">
         </div>
-        <h2 class="text-[#ccff00] font-black italic text-2xl mb-2 uppercase tracking-tighter" id="t-setup-title">Tactical Setup</h2>
-        <p class="text-zinc-500 text-[10px] mb-8 tracking-[0.3em] uppercase italic" id="t-setup-sub">Establish your rescue profile</p>
+        <h2 id="setup-title" class="text-[#ccff00] font-black italic text-xl mb-1 tracking-tighter uppercase">Tactical Setup</h2>
+        <p id="setup-sub" class="text-zinc-500 text-[9px] mb-6 tracking-[0.3em] uppercase italic">Scan to link family monitor</p>
         
-        <div class="w-full max-w-xs bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-800 mb-8 text-left shadow-2xl">
-            <label class="text-[#ccff00] text-[9px] font-black uppercase tracking-widest ml-2 mb-2 block" id="t-label-name">Patient Name</label>
-            <input type="text" id="user-name-input" placeholder="Type name here..." 
-                   class="w-full bg-black border border-zinc-800 p-4 rounded-2xl mb-6 text-white text-sm focus:border-[#ccff00] outline-none transition-all placeholder:opacity-30 uppercase">
-            
-            <button onclick="saveProfile()" class="w-full bg-[#ccff00] text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#ccff00]/10 active:scale-95 transition-all mb-4" id="t-btn-save">
-                Save Profile
-            </button>
+        <div class="bg-white p-3 rounded-2xl mb-4 shadow-[0_0_30px_rgba(255,255,255,0.05)] inline-block">
+            <div id="qrcode-container"></div>
+        </div>
+        
+        <div class="mb-6">
+            <p id="display-id" class="text-[#ccff00] font-mono text-lg font-bold tracking-widest bg-zinc-900 px-6 py-2 rounded-lg border border-zinc-800 italic">--</p>
+        </div>
 
-            <button onclick="connectRemote()" class="w-full border border-zinc-700 text-zinc-400 py-3 rounded-2xl font-bold text-[9px] uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
-                <span>🔘</span> <span id="t-btn-ble">Link Remote Trigger</span>
+        <div class="w-full max-w-xs bg-zinc-900/50 p-5 rounded-3xl border border-zinc-800 mb-8 text-left">
+            <label class="text-[#ccff00] text-[8px] font-black uppercase tracking-widest ml-2">Patient Name</label>
+            <input type="text" id="user-name" placeholder="Your Name" 
+                   class="w-full bg-black border border-zinc-800 p-3 rounded-xl mb-4 text-white text-sm focus:border-[#ccff00] outline-none">
+            
+            <h3 id="contact-header" class="text-white text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> Rescue Contact (SMS)
+            </h3>
+            <input type="text" id="contact-name" placeholder="Name (e.g. Daughter)" 
+                   class="w-full bg-black border border-zinc-800 p-3 rounded-xl mb-2 text-white text-sm focus:border-[#ccff00] outline-none">
+            <input type="tel" id="contact-phone" placeholder="Phone (e.g. +1...)" 
+                   class="w-full bg-black border border-zinc-800 p-3 rounded-xl mb-4 text-white text-sm focus:border-[#ccff00] outline-none">
+            
+            <button id="save-btn" onclick="saveConfig()" class="w-full bg-zinc-800 text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-zinc-700 transition-colors">
+                Save Profile & Contact
             </button>
         </div>
+        
+        <button id="enter-btn" onclick="closeSetup()" class="bg-[#ccff00] text-black px-12 py-4 rounded-full font-black text-sm uppercase tracking-tighter active:scale-95 transition-all shadow-lg shadow-[#ccff00]/20 mb-8">
+            Enter System
+        </button>
     </div>
 
-    <div class="text-center mb-8 flex flex-col items-center">
+    <div class="absolute top-6 right-6 flex gap-4 bg-zinc-900/50 p-2 rounded-full border border-zinc-800 z-10">
+        <button onclick="setLanguage('en')" id="btn-en" class="text-2xl grayscale-0 scale-110 transition-all focus:outline-none">🇺🇸</button>
+        <button onclick="setLanguage('es')" id="btn-es" class="text-2xl grayscale opacity-50 hover:opacity-100 transition-all focus:outline-none">🇪🇸</button>
+    </div>
+
+    <div class="text-center mb-10 mt-16 flex flex-col items-center">
         <div class="w-24 h-24 mb-6 bg-zinc-900 rounded-full flex items-center justify-center border-4 border-[#ccff00]/20 shadow-lg shadow-[#ccff00]/10 overflow-hidden">
             <img src="logo.png.jpg" alt="Logo" class="w-full h-full object-cover">
         </div>
-        <h1 class="text-[#ccff00] text-3xl font-black italic tracking-tighter uppercase leading-none">RESCUE SEND</h1>
-        
-        <div class="mt-4 bg-zinc-900 px-6 py-3 rounded-2xl border border-zinc-800 shadow-inner">
-            <p class="text-zinc-500 text-[8px] uppercase tracking-[0.2em] font-black mb-1" id="t-id-label">Your Private Rescue ID</p>
-            <p id="device-display" class="text-[#ccff00] text-xl font-mono tracking-[0.2em] font-black">---</p>
-        </div>
+        <h1 id="title" class="text-[#ccff00] text-3xl font-black italic tracking-tighter uppercase leading-none">RESCUE SEND</h1>
+        <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-1">Tactical Transmitter v5.9</p>
+        <p id="small-id-display" class="text-zinc-700 text-[9px] font-mono mt-2"></p>
     </div>
 
-    <button id="main-trigger" onclick="triggerRescue()" class="w-72 h-72 bg-red-600 hover:bg-red-700 text-white font-black rounded-full border-[12px] border-red-900/30 shadow-[0_0_60px_rgba(220,38,38,0.4)] active:scale-90 transition-all flex flex-col items-center justify-center group relative overflow-hidden focus:outline-none">
-        <span class="text-7xl italic uppercase leading-none tracking-tighter">SOS</span>
-        <span id="sub-text" class="text-[10px] opacity-70 mt-3 uppercase tracking-[0.3em] font-black">Press for Help</span>
+    <button id="main-trigger" onclick="triggerRescue()" class="w-64 h-64 bg-red-600 hover:bg-red-700 text-white font-black rounded-full border-[10px] border-red-900/30 shadow-[0_0_50px_rgba(220,38,38,0.4)] active:scale-90 transition-all flex flex-col items-center justify-center group relative overflow-hidden focus:outline-none">
+        <span id="tap-text" class="text-5xl italic uppercase leading-none">TAP</span>
+        <span id="sub-text" class="text-[10px] opacity-70 mt-2 uppercase tracking-[0.2em]">To Call Help</span>
         <div class="absolute inset-0 bg-white/10 opacity-0 group-active:opacity-100 transition-opacity"></div>
     </button>
 
-    <div id="status-box" class="mt-12 p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800 w-full max-w-xs text-center shadow-2xl transition-all">
-        <p id="status-text" class="text-zinc-600 font-bold text-[10px] uppercase tracking-[0.2em]">Ready to Transmit</p>
+    <div id="status-box" class="mt-12 p-4 rounded-2xl bg-zinc-900 border border-zinc-800 w-full max-w-xs text-center">
+        <p id="status-text" class="text-zinc-500 font-bold text-[10px] uppercase tracking-widest">System Ready</p>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    <script>
+        let currentLang = 'en';
+        let lastCoords = "No GPS Data";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDVIQ4S-w4Ag40uYuArW3o7Hw2XQwoQV7U",
-            authDomain: "montcode-e02c7.firebaseapp.com",
-            databaseURL: "https://montcode-e02c7-default-rtdb.firebaseio.com",
-            projectId: "montcode-e02c7",
-            storageBucket: "montcode-e02c7.firebasestorage.app",
-            messagingSenderId: "988300151844",
-            appId: "1:988300151844:web:b1a31275a9555de98a9cb1"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        let isSpanish = false;
-        window.toggleLanguage = () => {
-            isSpanish = !isSpanish;
-            document.getElementById('lang-label').innerText = isSpanish ? "ENG" : "ESP";
-            document.getElementById('t-setup-title').innerText = isSpanish ? "Configuración Táctica" : "Tactical Setup";
-            document.getElementById('t-label-name').innerText = isSpanish ? "Nombre del Paciente" : "Patient Name";
-            document.getElementById('t-btn-save').innerText = isSpanish ? "Guardar Perfil" : "Save Profile";
-            document.getElementById('t-btn-ble').innerText = isSpanish ? "Vincular Control Remoto" : "Link Remote Trigger";
-            document.getElementById('sub-text').innerText = isSpanish ? "Presionar para Ayuda" : "Press for Help";
-            document.getElementById('status-text').innerText = isSpanish ? "Listo para Transmitir" : "Ready to Transmit";
-        };
-
-        const patientID = localStorage.getItem('montcode_device_id') || 'MC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        const patientID = localStorage.getItem('montcode_device_id') || 
+                         'MC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        
         localStorage.setItem('montcode_device_id', patientID);
-        document.getElementById('device-display').innerText = patientID;
+        document.getElementById('display-id').innerText = patientID;
+        document.getElementById('small-id-display').innerText = "DEVICE ID: " + patientID;
 
-        window.onload = () => {
-            if (!localStorage.getItem('user_name')) {
-                document.getElementById('setup-screen').classList.remove('hidden');
+        // --- LÓGICA TAG BLUETOOTH / GATILLO ---
+        document.addEventListener('keydown', function(e) {
+            const triggers = ['Enter', 'VolumeUp', 'AudioVolumeUp', 'MediaPlayPause', 'HeadsetHook'];
+            if (triggers.includes(e.key) || e.keyCode === 13) {
+                e.preventDefault(); 
+                triggerRescue();
             }
-        };
-
-        window.saveProfile = () => {
-            const name = document.getElementById('user-name-input').value.trim();
-            if (name) {
-                localStorage.setItem('user_name', name);
-                document.getElementById('setup-screen').style.opacity = '0';
-                setTimeout(() => document.getElementById('setup-screen').classList.add('hidden'), 500);
-            }
-        };
-
-        window.connectRemote = async () => {
-            const status = document.getElementById('status-text');
-            try {
-                const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: ['battery_service', 'device_information']
-                });
-                status.innerText = isSpanish ? "CONTROL ENLAZADO ✅" : "REMOTE LINKED ✅";
-                await device.gatt.connect();
-            } catch (error) { console.log(error); }
-        };
-
-        window.addEventListener('keydown', (e) => {
-            const remoteTriggers = ['Enter', 'VolumeUp', 'VolumeDown', ' ', 'ArrowUp'];
-            if (remoteTriggers.includes(e.key)) triggerRescue();
         });
 
-        window.triggerRescue = async () => {
-            const status = document.getElementById('status-text');
-            const pName = localStorage.getItem('user_name') || "Anonymous Patient";
-            if (navigator.vibrate) navigator.vibrate([400, 100, 400]);
-            status.innerText = isSpanish ? "TRANSMITIENDO SOS..." : "TRANSMITTING SOS...";
+        window.onload = () => {
+            document.getElementById('user-name').value = localStorage.getItem('user_name') || "";
+            const savedContact = JSON.parse(localStorage.getItem('emergency_contact'));
+            if(savedContact) {
+                document.getElementById('contact-name').value = savedContact.name;
+                document.getElementById('contact-phone').value = savedContact.phone;
+            }
 
-            navigator.geolocation.getCurrentPosition(
-                (pos) => sendToFirebase(`${pos.coords.latitude},${pos.coords.longitude}`, pName),
-                () => sendToFirebase("No GPS Data", pName),
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
+            new QRCode(document.getElementById("qrcode-container"), {
+                text: patientID,
+                width: 150, height: 150,
+                colorDark: "#000000", colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
         };
 
-        function sendToFirebase(coords, name) {
-            const alertRef = ref(db, 'alerts/' + patientID);
-            set(alertRef, {
-                patientName: name,
-                location: coords,
-                timestamp: Date.now(),
-                status: 'CRITICAL',
-                audioSignal: 'play_alarm' // Avisa al Monitor que debe sonar
-            }).then(() => {
-                document.getElementById('status-text').innerText = "SIGNAL DELIVERED ✅";
-            });
+        const translations = {
+            en: {
+                setupTitle: "Tactical Setup", setupSub: "Scan to link family monitor",
+                contactHeader: "Rescue Contact (SMS)", saveBtn: "Save Profile & Contact",
+                enterBtn: "Enter System", title: "RESCUE SEND", tap: "TAP", 
+                sub: "To Call Help", ready: "System Ready",
+                transmitting: "TRANSMITTING GPS...", sent: "SIGNAL DELIVERED ✅",
+                msg: "I NEED HELP - CALL 911 IMMEDIATELY", offline: "CONNECTION FAILED",
+                alertSaved: "Configuration Saved", alertFill: "Please fill all fields"
+            },
+            es: {
+                setupTitle: "Configuración Táctica", setupSub: "Escanee para vincular monitor",
+                contactHeader: "Contacto de Rescate (SMS)", saveBtn: "Guardar Perfil y Contacto",
+                enterBtn: "Entrar al Sistema", title: "ENVÍO RESCATE", tap: "TOCAR", 
+                sub: "Pedir Ayuda", ready: "Sistema Listo",
+                transmitting: "TRANSMITIENDO GPS...", sent: "SEÑAL ENTREGADA ✅",
+                msg: "NECESITO AYUDA - LLAME AL 911 DE INMEDIATO", offline: "SIN CONEXIÓN",
+                alertSaved: "Configuración Guardada", alertFill: "Complete los campos"
+            }
+        };
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            const t = translations[lang];
+            document.getElementById('title').innerText = t.title;
+            document.getElementById('tap-text').innerText = t.tap;
+            document.getElementById('sub-text').innerText = t.sub;
+            document.getElementById('status-text').innerText = t.ready;
+            document.getElementById('setup-title').innerText = t.setupTitle;
+            document.getElementById('setup-sub').innerText = t.setupSub;
+            document.getElementById('contact-header').innerText = t.contactHeader;
+            document.getElementById('save-btn').innerText = t.saveBtn;
+            document.getElementById('enter-btn').innerText = t.enterBtn;
+            document.getElementById('btn-en').classList.toggle('grayscale', lang !== 'en');
+            document.getElementById('btn-es').classList.toggle('grayscale', lang !== 'es');
+        }
+
+        function saveConfig() {
+            const userName = document.getElementById('user-name').value;
+            const contactName = document.getElementById('contact-name').value;
+            const phone = document.getElementById('contact-phone').value;
+            
+            if(userName && contactName && phone) {
+                localStorage.setItem('user_name', userName);
+                localStorage.setItem('emergency_contact', JSON.stringify({name: contactName, phone: phone}));
+                alert(translations[currentLang].alertSaved);
+            } else {
+                alert(translations[currentLang].alertFill);
+            }
+        }
+
+        function closeSetup() {
+            const screen = document.getElementById('setup-screen');
+            screen.style.opacity = '0';
+            setTimeout(() => screen.classList.add('hidden'), 500);
+        }
+
+        async function triggerRescue() {
+            const status = document.getElementById('status-text');
+            const pName = localStorage.getItem('user_name') || "Emergency Patient";
+            
+            if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+            status.innerText = translations[currentLang].transmitting;
+            status.className = "text-yellow-500 font-bold text-[10px] animate-pulse uppercase tracking-widest";
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        lastCoords = `${pos.coords.latitude},${pos.coords.longitude}`;
+                        executeAlert(lastCoords, pName);
+                    },
+                    () => executeAlert("No GPS Data", pName),
+                    { timeout: 5000, enableHighAccuracy: true }
+                );
+            } else {
+                executeAlert("No GPS Data", pName);
+            }
+        }
+
+        async function executeAlert(coords, name) {
+            const status = document.getElementById('status-text');
+            
+            // 1. TRANSMISIÓN DIGITAL (Pusher) - Llega al Monitor instantáneamente
+            try {
+                const response = await fetch('/api/pusher-relay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        sys: 911, channel_id: patientID,
+                        patient: name, provider: translations[currentLang].msg,
+                        location: coords 
+                    })
+                });
+                if(response.ok) {
+                    status.innerText = translations[currentLang].sent;
+                    status.className = "text-[#ccff00] font-bold text-[10px] uppercase tracking-widest";
+                }
+            } catch (e) {
+                status.innerText = translations[currentLang].offline;
+            }
+
+            // 2. RESPALDO POR SMS (Opcional - Requiere acción del usuario)
+            const contact = JSON.parse(localStorage.getItem('emergency_contact'));
+            if(contact) {
+                const mapLink = coords !== "No GPS Data" ? ` https://www.google.com/maps?q=${coords}` : "";
+                const smsBody = `${translations[currentLang].msg}. I am ${name}.${mapLink}`;
+                setTimeout(() => {
+                    window.location.href = `sms:${contact.phone}?body=${encodeURIComponent(smsBody)}`;
+                }, 1500);
+            }
         }
     </script>
 </body>
