@@ -59,7 +59,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // CONFIGURACIÓN DE TU PROYECTO FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyDVIQ4S-w4Ag40uYuArW3o7Hw2XQwoQV7U",
             authDomain: "montcode-e02c7.firebaseapp.com",
@@ -78,7 +77,6 @@
         window.toggleLanguage = () => {
             isSpanish = !isSpanish;
             document.getElementById('lang-label').innerText = isSpanish ? "ENG" : "ESP";
-            // Traducciones
             document.getElementById('t-setup-title').innerText = isSpanish ? "Configuración Táctica" : "Tactical Setup";
             document.getElementById('t-setup-sub').innerText = isSpanish ? "Establezca su perfil de rescate" : "Establish your rescue profile";
             document.getElementById('t-label-name').innerText = isSpanish ? "Nombre del Paciente" : "Patient Name";
@@ -88,7 +86,7 @@
             document.getElementById('status-text').innerText = isSpanish ? "Listo para Transmitir" : "Ready to Transmit";
         };
 
-        // --- GESTIÓN DE ID Y PERFIL ---
+        // --- GESTIÓN DE ID ---
         const patientID = localStorage.getItem('montcode_device_id') || 'MC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
         localStorage.setItem('montcode_device_id', patientID);
         document.getElementById('device-display').innerText = patientID;
@@ -108,21 +106,11 @@
             }
         };
 
-        // --- SOPORTE BOTÓN BLUETOOTH / HID ---
-        document.addEventListener('keydown', (e) => {
-            const triggers = ['Enter', 'VolumeUp', 'MediaPlayPause', 'HeadsetHook'];
-            if (triggers.includes(e.key) || e.keyCode === 13) {
-                e.preventDefault();
-                triggerRescue();
-            }
-        });
-
-        // --- FUNCIÓN DE ACTIVACIÓN SOS ---
+        // --- ACTIVACIÓN SOS ---
         window.triggerRescue = async () => {
             const status = document.getElementById('status-text');
             const pName = localStorage.getItem('user_name') || "Unknown Patient";
             
-            // Vibración táctica
             if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
             status.innerText = isSpanish ? "LOCALIZANDO GPS..." : "LOCATING GPS...";
@@ -146,6 +134,7 @@
             const status = document.getElementById('status-text');
             const alertRef = ref(db, 'alerts/' + patientID);
 
+            // Cumpliendo con las Reglas de Seguridad (hasChildren: patientName, location, status, timestamp)
             set(alertRef, {
                 patientName: name,
                 location: coords,
@@ -153,12 +142,22 @@
                 status: 'CRITICAL'
             }).then(() => {
                 status.innerText = isSpanish ? "SEÑAL ENTREGADA ✅" : "SIGNAL DELIVERED ✅";
-                status.className = "text-[#ccff00] font-black text-[10px] uppercase tracking-[0.2em] animate-none";
+                status.className = "text-[#ccff00] font-black text-[10px] uppercase tracking-[0.2em]";
             }).catch((e) => {
-                status.innerText = isSpanish ? "ERROR DE CONEXIÓN" : "CONNECTION ERROR";
+                status.innerText = isSpanish ? "ERROR DE SEGURIDAD" : "SECURITY ERROR";
                 status.className = "text-red-500 font-black text-[10px] uppercase tracking-[0.2em]";
+                console.error(e);
             });
         }
+
+        // Soporte de Teclas de Volumen / Media
+        document.addEventListener('keydown', (e) => {
+            const triggers = ['Enter', 'VolumeUp', 'MediaPlayPause', 'HeadsetHook'];
+            if (triggers.includes(e.key)) {
+                e.preventDefault();
+                triggerRescue();
+            }
+        });
     </script>
 </body>
 </html>
