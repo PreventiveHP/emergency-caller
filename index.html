@@ -1,0 +1,23 @@
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, set } from "firebase/database";
+
+const firebaseConfig = { /* Tus llaves aquí */ };
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+async function triggerRescue() {
+    const pName = localStorage.getItem('user_name') || "Emergency Patient";
+    const coords = await getGPS(); // Función para obtener Lat/Log
+    
+    // 1. Escribimos en la rama 'alerts' para que el familiar lo vea en vivo
+    const alertRef = ref(db, 'alerts/' + patientID);
+    set(alertRef, {
+        patientName: pName,
+        location: coords,
+        timestamp: Date.now(),
+        status: 'CRITICAL'
+    });
+
+    // 2. Aquí dispararemos el Relay para la notificación Push (FCM)
+    // fetch('tu-cloud-function-o-relay', { ... });
+}
