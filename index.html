@@ -27,8 +27,12 @@
             <input type="text" id="user-name-input" placeholder="Ex: Manuel Montalvan" 
                    class="w-full bg-black border border-zinc-800 p-4 rounded-2xl mb-6 text-white text-sm focus:border-[#ccff00] outline-none transition-all placeholder:opacity-30">
             
-            <button onclick="saveProfile()" class="w-full bg-[#ccff00] text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#ccff00]/10 active:scale-95 transition-all" id="t-btn-save">
+            <button onclick="saveProfile()" class="w-full bg-[#ccff00] text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#ccff00]/10 active:scale-95 transition-all mb-4" id="t-btn-save">
                 Save Profile
+            </button>
+
+            <button onclick="connectRemote()" class="w-full border border-zinc-700 text-zinc-400 py-3 rounded-2xl font-bold text-[9px] uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+                <span>🔘</span> <span id="t-btn-ble">Link Remote Trigger</span>
             </button>
         </div>
     </div>
@@ -81,6 +85,7 @@
             document.getElementById('t-setup-sub').innerText = isSpanish ? "Establezca su perfil de rescate" : "Establish your rescue profile";
             document.getElementById('t-label-name').innerText = isSpanish ? "Nombre del Paciente" : "Patient Name";
             document.getElementById('t-btn-save').innerText = isSpanish ? "Guardar Perfil" : "Save Profile";
+            document.getElementById('t-btn-ble').innerText = isSpanish ? "Vincular Control Remoto" : "Link Remote Trigger";
             document.getElementById('t-id-label').innerText = isSpanish ? "Tu ID de Rescate Privado" : "Your Private Rescue ID";
             document.getElementById('sub-text').innerText = isSpanish ? "Presionar para Ayuda" : "Press for Help";
             document.getElementById('status-text').innerText = isSpanish ? "Listo para Transmitir" : "Ready to Transmit";
@@ -106,37 +111,56 @@
             }
         };
 
+        // --- LÓGICA DE BOTÓN REMOTO (CAMARA/BT SHUTTER) ---
+        window.connectRemote = async () => {
+            const status = document.getElementById('status-text');
+            try {
+                // Abre el selector para cualquier dispositivo (sin filtros de nombre para ser universal)
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['battery_service', 'device_information']
+                });
+
+                status.innerText = isSpanish ? "CONTROL ENLAZADO ✅" : "REMOTE LINKED ✅";
+                status.className = "text-[#ccff00] font-black text-[10px] animate-pulse uppercase tracking-[0.2em]";
+
+                await device.gatt.connect();
+
+            } catch (error) {
+                console.log("BLE Error:", error);
+                status.innerText = isSpanish ? "ERROR DE VINCULACIÓN" : "PAIRING ERROR";
+            }
+        };
+
+        // ESCUCHADOR DE SEÑAL HID (Los botones de cámara suelen enviar Enter o VolumeUp)
+        window.addEventListener('keydown', (e) => {
+            // Mapeo de teclas comunes en disparadores Bluetooth
+            const remoteTriggers = ['Enter', 'VolumeUp', 'VolumeDown', ' ', 'ArrowUp', 'ArrowDown'];
+            if (remoteTriggers.includes(e.key)) {
+                console.log("Señal de control remoto detectada:", e.key);
+                triggerRescue();
+            }
+        });
+
         // --- ACTIVACIÓN SOS ---
         window.triggerRescue = async () => {
             const status = document.getElementById('status-text');
             const pName = localStorage.getItem('user_name') || "Unknown Patient";
             const btn = document.getElementById('main-trigger');
             
-            // Efecto táctil inmediato
             if (navigator.vibrate) navigator.vibrate([400, 100, 400]);
             btn.classList.add('scale-90', 'opacity-50');
             setTimeout(() => btn.classList.remove('scale-90', 'opacity-50'), 200);
 
-            status.innerText = isSpanish ? "BUSCANDO SATÉLITES..." : "SEARCHING SATELLITES...";
+            status.innerText = isSpanish ? "TRANSMITIENDO SOS..." : "TRANSMITTING SOS...";
             status.className = "text-yellow-400 font-black text-[10px] animate-pulse uppercase tracking-[0.2em]";
 
-            // Configuración de GPS de alta precisión
-            const geoOptions = {
-                enableHighAccuracy: true, 
-                timeout: 10000, 
-                maximumAge: 0 // Forzar ubicación fresca, no de caché
-            };
+            const geoOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
 
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        const coords = `${pos.coords.latitude},${pos.coords.longitude}`;
-                        sendToFirebase(coords, pName);
-                    },
-                    (err) => {
-                        console.warn("GPS Error:", err);
-                        sendToFirebase("No GPS Data", pName);
-                    },
+                    (pos) => sendToFirebase(`${pos.coords.latitude},${pos.coords.longitude}`, pName),
+                    () => sendToFirebase("No GPS Data", pName),
                     geoOptions
                 );
             } else {
@@ -154,14 +178,12 @@
                 timestamp: Date.now(),
                 status: 'CRITICAL'
             }).then(() => {
-                status.innerText = isSpanish ? "SEÑAL ENVIADA ✅" : "SIGNAL SENT ✅";
+                status.innerText = isSpanish ? "SEÑAL ENTREGADA ✅" : "SIGNAL DELIVERED ✅";
                 status.className = "text-[#ccff00] font-black text-[10px] uppercase tracking-[0.2em]";
-                // Feedback visual de éxito
                 document.getElementById('status-box').classList.add('border-[#ccff00]');
             }).catch((e) => {
                 status.innerText = isSpanish ? "ERROR DE RED" : "NETWORK ERROR";
                 status.className = "text-red-500 font-black text-[10px] uppercase tracking-[0.2em]";
-                console.error(e);
             });
         }
     </script>
