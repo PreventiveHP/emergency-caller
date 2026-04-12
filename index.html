@@ -24,8 +24,8 @@
         
         <div class="w-full max-w-xs bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-800 mb-8 text-left shadow-2xl">
             <label class="text-[#ccff00] text-[9px] font-black uppercase tracking-widest ml-2 mb-2 block" id="t-label-name">Patient Name</label>
-            <input type="text" id="user-name-input" placeholder="Ex: Manuel Montalvan" 
-                   class="w-full bg-black border border-zinc-800 p-4 rounded-2xl mb-6 text-white text-sm focus:border-[#ccff00] outline-none transition-all placeholder:opacity-30">
+            <input type="text" id="user-name-input" placeholder="Type name here..." 
+                   class="w-full bg-black border border-zinc-800 p-4 rounded-2xl mb-6 text-white text-sm focus:border-[#ccff00] outline-none transition-all placeholder:opacity-30 uppercase">
             
             <button onclick="saveProfile()" class="w-full bg-[#ccff00] text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#ccff00]/10 active:scale-95 transition-all mb-4" id="t-btn-save">
                 Save Profile
@@ -76,22 +76,18 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // --- IDIOMA ---
         let isSpanish = false;
         window.toggleLanguage = () => {
             isSpanish = !isSpanish;
             document.getElementById('lang-label').innerText = isSpanish ? "ENG" : "ESP";
             document.getElementById('t-setup-title').innerText = isSpanish ? "Configuración Táctica" : "Tactical Setup";
-            document.getElementById('t-setup-sub').innerText = isSpanish ? "Establezca su perfil de rescate" : "Establish your rescue profile";
             document.getElementById('t-label-name').innerText = isSpanish ? "Nombre del Paciente" : "Patient Name";
             document.getElementById('t-btn-save').innerText = isSpanish ? "Guardar Perfil" : "Save Profile";
             document.getElementById('t-btn-ble').innerText = isSpanish ? "Vincular Control Remoto" : "Link Remote Trigger";
-            document.getElementById('t-id-label').innerText = isSpanish ? "Tu ID de Rescate Privado" : "Your Private Rescue ID";
             document.getElementById('sub-text').innerText = isSpanish ? "Presionar para Ayuda" : "Press for Help";
             document.getElementById('status-text').innerText = isSpanish ? "Listo para Transmitir" : "Ready to Transmit";
         };
 
-        // --- GESTIÓN DE ID ---
         const patientID = localStorage.getItem('montcode_device_id') || 'MC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
         localStorage.setItem('montcode_device_id', patientID);
         document.getElementById('device-display').innerText = patientID;
@@ -111,79 +107,46 @@
             }
         };
 
-        // --- LÓGICA DE BOTÓN REMOTO (CAMARA/BT SHUTTER) ---
         window.connectRemote = async () => {
             const status = document.getElementById('status-text');
             try {
-                // Abre el selector para cualquier dispositivo (sin filtros de nombre para ser universal)
                 const device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
                     optionalServices: ['battery_service', 'device_information']
                 });
-
                 status.innerText = isSpanish ? "CONTROL ENLAZADO ✅" : "REMOTE LINKED ✅";
-                status.className = "text-[#ccff00] font-black text-[10px] animate-pulse uppercase tracking-[0.2em]";
-
                 await device.gatt.connect();
-
-            } catch (error) {
-                console.log("BLE Error:", error);
-                status.innerText = isSpanish ? "ERROR DE VINCULACIÓN" : "PAIRING ERROR";
-            }
+            } catch (error) { console.log(error); }
         };
 
-        // ESCUCHADOR DE SEÑAL HID (Los botones de cámara suelen enviar Enter o VolumeUp)
         window.addEventListener('keydown', (e) => {
-            // Mapeo de teclas comunes en disparadores Bluetooth
-            const remoteTriggers = ['Enter', 'VolumeUp', 'VolumeDown', ' ', 'ArrowUp', 'ArrowDown'];
-            if (remoteTriggers.includes(e.key)) {
-                console.log("Señal de control remoto detectada:", e.key);
-                triggerRescue();
-            }
+            const remoteTriggers = ['Enter', 'VolumeUp', 'VolumeDown', ' ', 'ArrowUp'];
+            if (remoteTriggers.includes(e.key)) triggerRescue();
         });
 
-        // --- ACTIVACIÓN SOS ---
         window.triggerRescue = async () => {
             const status = document.getElementById('status-text');
-            const pName = localStorage.getItem('user_name') || "Unknown Patient";
-            const btn = document.getElementById('main-trigger');
-            
+            const pName = localStorage.getItem('user_name') || "Anonymous Patient";
             if (navigator.vibrate) navigator.vibrate([400, 100, 400]);
-            btn.classList.add('scale-90', 'opacity-50');
-            setTimeout(() => btn.classList.remove('scale-90', 'opacity-50'), 200);
-
             status.innerText = isSpanish ? "TRANSMITIENDO SOS..." : "TRANSMITTING SOS...";
-            status.className = "text-yellow-400 font-black text-[10px] animate-pulse uppercase tracking-[0.2em]";
 
-            const geoOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
-
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => sendToFirebase(`${pos.coords.latitude},${pos.coords.longitude}`, pName),
-                    () => sendToFirebase("No GPS Data", pName),
-                    geoOptions
-                );
-            } else {
-                sendToFirebase("GPS Not Supported", pName);
-            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => sendToFirebase(`${pos.coords.latitude},${pos.coords.longitude}`, pName),
+                () => sendToFirebase("No GPS Data", pName),
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
         };
 
         function sendToFirebase(coords, name) {
-            const status = document.getElementById('status-text');
             const alertRef = ref(db, 'alerts/' + patientID);
-
             set(alertRef, {
                 patientName: name,
                 location: coords,
                 timestamp: Date.now(),
-                status: 'CRITICAL'
+                status: 'CRITICAL',
+                audioSignal: 'play_alarm' // Avisa al Monitor que debe sonar
             }).then(() => {
-                status.innerText = isSpanish ? "SEÑAL ENTREGADA ✅" : "SIGNAL DELIVERED ✅";
-                status.className = "text-[#ccff00] font-black text-[10px] uppercase tracking-[0.2em]";
-                document.getElementById('status-box').classList.add('border-[#ccff00]');
-            }).catch((e) => {
-                status.innerText = isSpanish ? "ERROR DE RED" : "NETWORK ERROR";
-                status.className = "text-red-500 font-black text-[10px] uppercase tracking-[0.2em]";
+                document.getElementById('status-text').innerText = "SIGNAL DELIVERED ✅";
             });
         }
     </script>
