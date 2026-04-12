@@ -11,7 +11,7 @@
 </head>
 <body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-6 font-sans overflow-hidden">
 
-    <button onclick="toggleLanguage()" class="absolute top-4 right-4 bg-zinc-800 px-3 py-1 rounded-full text-[10px] font-bold border border-zinc-700 z-[60]">
+    <button onclick="toggleLanguage()" class="absolute top-4 right-4 bg-zinc-800 px-3 py-1 rounded-full text-[10px] font-bold border border-zinc-700 z-[60] active:scale-95 transition-all">
         <span id="lang-label">ESP</span> 🇪🇸
     </button>
 
@@ -22,10 +22,10 @@
         <h2 class="text-[#ccff00] font-black italic text-2xl mb-2 uppercase tracking-tighter" id="t-setup-title">Tactical Setup</h2>
         <p class="text-zinc-500 text-[10px] mb-8 tracking-[0.3em] uppercase italic" id="t-setup-sub">Establish your rescue profile</p>
         
-        <div class="w-full max-w-xs bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-800 mb-8 text-left">
+        <div class="w-full max-w-xs bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-800 mb-8 text-left shadow-2xl">
             <label class="text-[#ccff00] text-[9px] font-black uppercase tracking-widest ml-2 mb-2 block" id="t-label-name">Patient Name</label>
             <input type="text" id="user-name-input" placeholder="Ex: Manuel Montalvan" 
-                   class="w-full bg-black border border-zinc-800 p-4 rounded-2xl mb-6 text-white text-sm focus:border-[#ccff00] outline-none transition-all">
+                   class="w-full bg-black border border-zinc-800 p-4 rounded-2xl mb-6 text-white text-sm focus:border-[#ccff00] outline-none transition-all placeholder:opacity-30">
             
             <button onclick="saveProfile()" class="w-full bg-[#ccff00] text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#ccff00]/10 active:scale-95 transition-all" id="t-btn-save">
                 Save Profile
@@ -38,26 +38,28 @@
             <img src="logo.png.jpg" alt="Logo" class="w-full h-full object-cover">
         </div>
         <h1 class="text-[#ccff00] text-3xl font-black italic tracking-tighter uppercase leading-none">RESCUE SEND</h1>
-        <div class="mt-4 bg-zinc-900 px-4 py-2 rounded-xl border border-zinc-800">
-            <p class="text-zinc-500 text-[8px] uppercase tracking-widest font-bold mb-1">Your Private Rescue ID</p>
-            <p id="device-display" class="text-[#ccff00] text-lg font-mono tracking-widest font-black"></p>
+        
+        <div class="mt-4 bg-zinc-900 px-6 py-3 rounded-2xl border border-zinc-800 shadow-inner">
+            <p class="text-zinc-500 text-[8px] uppercase tracking-[0.2em] font-black mb-1" id="t-id-label">Your Private Rescue ID</p>
+            <p id="device-display" class="text-[#ccff00] text-xl font-mono tracking-[0.2em] font-black"></p>
         </div>
     </div>
 
     <button id="main-trigger" onclick="triggerRescue()" class="w-72 h-72 bg-red-600 hover:bg-red-700 text-white font-black rounded-full border-[12px] border-red-900/30 shadow-[0_0_60px_rgba(220,38,38,0.4)] active:scale-90 transition-all flex flex-col items-center justify-center group relative overflow-hidden focus:outline-none">
-        <span class="text-6xl italic uppercase leading-none">SOS</span>
-        <span id="sub-text" class="text-[10px] opacity-70 mt-3 uppercase tracking-[0.3em] font-bold">Press for Help</span>
+        <span class="text-7xl italic uppercase leading-none tracking-tighter">SOS</span>
+        <span id="sub-text" class="text-[10px] opacity-70 mt-3 uppercase tracking-[0.3em] font-black">Press for Help</span>
         <div class="absolute inset-0 bg-white/10 opacity-0 group-active:opacity-100 transition-opacity"></div>
     </button>
 
     <div id="status-box" class="mt-12 p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800 w-full max-w-xs text-center shadow-2xl">
-        <p id="status-text" class="text-zinc-500 font-bold text-[10px] uppercase tracking-[0.2em]">Ready to Transmit</p>
+        <p id="status-text" class="text-zinc-600 font-bold text-[10px] uppercase tracking-[0.2em]">Ready to Transmit</p>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+        // CONFIGURACIÓN DE TU PROYECTO FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyDVIQ4S-w4Ag40uYuArW3o7Hw2XQwoQV7U",
             authDomain: "montcode-e02c7.firebaseapp.com",
@@ -71,19 +73,22 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Language Logic
+        // --- LÓGICA DE IDIOMA ---
         let isSpanish = false;
         window.toggleLanguage = () => {
             isSpanish = !isSpanish;
             document.getElementById('lang-label').innerText = isSpanish ? "ENG" : "ESP";
+            // Traducciones
             document.getElementById('t-setup-title').innerText = isSpanish ? "Configuración Táctica" : "Tactical Setup";
             document.getElementById('t-setup-sub').innerText = isSpanish ? "Establezca su perfil de rescate" : "Establish your rescue profile";
             document.getElementById('t-label-name').innerText = isSpanish ? "Nombre del Paciente" : "Patient Name";
             document.getElementById('t-btn-save').innerText = isSpanish ? "Guardar Perfil" : "Save Profile";
+            document.getElementById('t-id-label').innerText = isSpanish ? "Tu ID de Rescate Privado" : "Your Private Rescue ID";
             document.getElementById('sub-text').innerText = isSpanish ? "Presionar para Ayuda" : "Press for Help";
             document.getElementById('status-text').innerText = isSpanish ? "Listo para Transmitir" : "Ready to Transmit";
         };
 
+        // --- GESTIÓN DE ID Y PERFIL ---
         const patientID = localStorage.getItem('montcode_device_id') || 'MC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
         localStorage.setItem('montcode_device_id', patientID);
         document.getElementById('device-display').innerText = patientID;
@@ -103,6 +108,7 @@
             }
         };
 
+        // --- SOPORTE BOTÓN BLUETOOTH / HID ---
         document.addEventListener('keydown', (e) => {
             const triggers = ['Enter', 'VolumeUp', 'MediaPlayPause', 'HeadsetHook'];
             if (triggers.includes(e.key) || e.keyCode === 13) {
@@ -111,13 +117,16 @@
             }
         });
 
+        // --- FUNCIÓN DE ACTIVACIÓN SOS ---
         window.triggerRescue = async () => {
             const status = document.getElementById('status-text');
             const pName = localStorage.getItem('user_name') || "Unknown Patient";
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            
+            // Vibración táctica
+            if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
             status.innerText = isSpanish ? "LOCALIZANDO GPS..." : "LOCATING GPS...";
-            status.className = "text-yellow-500 font-bold text-[10px] animate-pulse uppercase tracking-widest";
+            status.className = "text-yellow-400 font-bold text-[10px] animate-pulse uppercase tracking-[0.2em]";
 
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -144,10 +153,10 @@
                 status: 'CRITICAL'
             }).then(() => {
                 status.innerText = isSpanish ? "SEÑAL ENTREGADA ✅" : "SIGNAL DELIVERED ✅";
-                status.className = "text-[#ccff00] font-bold text-[10px] uppercase tracking-widest";
+                status.className = "text-[#ccff00] font-black text-[10px] uppercase tracking-[0.2em] animate-none";
             }).catch((e) => {
-                status.innerText = "CONNECTION ERROR";
-                status.className = "text-red-500 font-bold text-[10px] uppercase tracking-widest";
+                status.innerText = isSpanish ? "ERROR DE CONEXIÓN" : "CONNECTION ERROR";
+                status.className = "text-red-500 font-black text-[10px] uppercase tracking-[0.2em]";
             });
         }
     </script>
