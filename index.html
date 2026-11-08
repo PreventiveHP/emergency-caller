@@ -3,9 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>MontCode™ Rescue Send</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -114,7 +111,6 @@
         document.getElementById('display-id').innerText = patientID;
         document.getElementById('small-id-display').innerText = "DEVICE ID: " + patientID;
 
-        // ACTIVAR PUENTE DE HARDWARE
         function armSystemAudio() {
             const audio = document.getElementById('audio-bridge');
             const hiddenInput = document.getElementById('bridge-input');
@@ -142,10 +138,12 @@
             } catch (e) {}
         }
 
-        // ESCUCHA DE BOTÓN BLUETOOTH (Zttopo, AB Shutter 3, Selfie Stick)
+        // ESCUCHA DE BOTÓN BLUETOOTH (PERMITIENDO ESCRIBIR EN LOS INPUTS)
         window.addEventListener('keydown', function(e) {
-            const hiddenInput = document.getElementById('bridge-input');
-            if(hiddenInput) hiddenInput.focus();
+            // Si el usuario está escribiendo en una caja de texto, NO bloqueamos el teclado
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                return; 
+            }
 
             const triggers = ['Enter', 'VolumeUp', 'AudioVolumeUp', 'MediaPlayPause', 'HeadsetHook'];
             if (triggers.includes(e.key) || e.keyCode === 13 || (e.key && e.key.includes("Volume"))) {
@@ -270,7 +268,6 @@
         async function executeAlert(coords, name) {
             const status = document.getElementById('status-text');
             
-            // TRANSMISIÓN DIRECTA A FIREBASE (Exactamente compatible con el Receiver)
             try {
                 if (window.firebaseDB && window.firebaseSet && window.firebaseRef) {
                     await window.firebaseSet(window.firebaseRef(window.firebaseDB, 'alerts/' + patientID), {
@@ -293,7 +290,6 @@
                 status.className = "text-red-500 font-bold text-[10px] uppercase tracking-widest";
             }
 
-            // RESPALDO POR SMS LOCAL
             const contact = JSON.parse(localStorage.getItem('emergency_contact'));
             if(contact && contact.phone) {
                 const mapLink = coords !== "No GPS Data" ? ` https://www.google.com/maps?q=${coords}` : "";
