@@ -114,7 +114,7 @@
         function armSystemAudio() {
             const audio = document.getElementById('audio-bridge');
             const hiddenInput = document.getElementById('bridge-input');
-            if(hiddenInput) hiddenInput.focus();
+            if(hiddenInput && document.activeElement.tagName !== 'INPUT') hiddenInput.focus();
 
             try {
                 audio.src = 'silence.mp3.m4a';
@@ -138,10 +138,11 @@
             } catch (e) {}
         }
 
-        // ESCUCHA DE BOTÓN BLUETOOTH (PERMITIENDO ESCRIBIR EN LOS INPUTS)
+        // CONTROL DE TECLADO BLUETOOTH PROTEGIENDO LOS INPUTS
         window.addEventListener('keydown', function(e) {
-            // Si el usuario está escribiendo en una caja de texto, NO bloqueamos el teclado
-            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+            // Si el foco está en un input o textarea, permitimos escribir libremente
+            const activeTag = document.activeElement ? document.activeElement.tagName : '';
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
                 return; 
             }
 
@@ -150,7 +151,7 @@
                 e.preventDefault(); 
                 triggerRescue();
             }
-        }, true);
+        });
 
         window.onload = () => {
             document.getElementById('user-name').value = localStorage.getItem('user_name') || "";
